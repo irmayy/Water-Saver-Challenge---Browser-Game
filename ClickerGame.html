@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Su Tasarrufu Oyunu</title>
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: linear-gradient(135deg, #e0f7fa 0%, #80deea 100%);
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            overflow: auto;
+        }
+        h1 {
+            color: #004d40;
+            font-size: 2.5rem;
+            margin: 20px 0;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.1);
+        }
+        p {
+            color: #00695c;
+            font-size: 1.2rem;
+            margin-bottom: 20px;
+        }
+        #game-area {
+            position: relative;
+            width: 700px;
+            height: 450px;
+            margin: 20px auto;
+            border: 4px solid #00796b;
+            border-radius: 15px;
+            background: linear-gradient(to bottom, #b2dfdb, #e0f7fa);
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+            overflow: hidden;
+            display: none; /* Oyun alanı başlangıçta gizli */
+        }
+        .faucet, .leak, .item {
+            position: absolute;
+            width: 70px;
+            height: 70px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 2rem;
+            font-weight: bold;
+            transition: transform 0.2s, box-shadow 0.2s;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+        }
+        .faucet {
+            background: radial-gradient(circle, #00796b 0%, #004d40 100%);
+        }
+        .leak {
+            background: radial-gradient(circle, #d32f2f 0%, #b71c1c 100%);
+        }
+        .item {
+            background: radial-gradient(circle, #d32f2f 0%, #b71c1c 100%);
+        }
+        .faucet:hover, .leak:hover, .item:hover {
+            transform: scale(1.1);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.4);
+        }
+        .faucet:active, .leak:active, .item:active {
+            transform: scale(0.95);
+        }
+        #score, #timer {
+            font-size: 1.8rem;
+            font-weight: bold;
+            color: #004d40;
+            margin: 10px 0;
+            background: rgba(255, 255, 255, 0.8);
+            padding: 10px 20px;
+            border-radius: 10px;
+            display: none; /* Puan ve süre başlangıçta gizli */
+        }
+        #timer {
+            font-size: 1.5rem;
+            color: #d32f2f;
+        }
+        .game-over, .game-won {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            font-size: 2rem;
+            display: none;
+        }
+        .game-won {
+            background: rgba(0, 100, 0, 0.7);
+        }
+        .game-over button, .game-won button {
+            margin-top: 20px;
+            padding: 10px 20px;
+            font-size: 1.2rem;
+            background: #00796b;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        .game-over button:hover, .game-won button:hover {
+            background: #004d40;
+        }
+        @keyframes drop {
+            0% { transform: translateY(-10px); opacity: 1; }
+            100% { transform: translateY(20px); opacity: 0; }
+        }
+        .water-drop {
+            position: absolute;
+            font-size: 1.5rem;
+            animation: drop 0.8s linear infinite;
+        }
+        #history {
+            width: 700px;
+            margin: 20px auto;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 15px;
+            border-radius: 10px;
+            text-align: left;
+            max-height: 150px;
+            overflow-y: auto;
+        }
+        #history h3 {
+            margin: 0 0 10px 0;
+            color: #004d40;
+        }
+        #history p {
+            margin: 5px 0;
+            font-size: 1rem;
+            color: #00695c;
+        }
+        #difficulty-selector {
+            margin: 10px 0;
+        }
+        #difficulty-selector label {
+            font-size: 1.2rem;
+            color: #004d40;
+            margin-right: 10px;
+        }
+        #difficulty-selector select {
+            padding: 8px;
+            font-size: 1rem;
+            border-radius: 5px;
+            border: 2px solid #00796b;
+            background: rgba(255, 255, 255, 0.8);
+            cursor: pointer;
+        }
+        #start-button {
+            padding: 12px 24px;
+            font-size: 1.2rem;
+            background: #00796b;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background 0.3s;
+            margin: 10px 0;
+        }
+        #start-button:hover {
+            background: #004d40;
+        }
+    </style>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+</head>
+<body>
+    <h1>Su Tasarrufu Oyunu</h1>
+    <div id="difficulty-selector">
+        <label for="difficulty">Zorluk Seviyesi:</label>
+        <select id="difficulty">
+            <option value="easy">Kolay</option>
+            <option value="medium" selected>Orta</option>
+            <option value="hard">Zor</option>
+        </select>
+    </div>
+    <button id="start-button" onclick="startGame()">Oyuna Başla</button>
+    <p id="instructions"> <span id="time-goal">50</span> saniyede <span id="score-goal">500</span> puan topla! Kırmızı nesnelere dikkat et! </p>
+    <div id="game-area">
+        <div id="game-over" class="game-over">
+            <div>Oyun Bitti!</div>
+            <div>Toplam Puan: <span id="final-score"></span></div>
+            <button onclick="startGame()">Yeniden Başlat</button>
+        </div>
+        <div id="game-won" class="game-won">
+            <div>Kazandınız! 🎉</div>
+            <div>Toplam Puan: <span id="final-score-won"></span></div>
+            <button onclick="startGame()">Yeniden Başlat</button>
+        </div>
+    </div>
+    <div id="score">Puan: 0</div>
+    <div id="timer">Kalan Süre: 50</div>
+    <div id="history">
+        <h3>Oyun Geçmişi</h3>
+        <div id="history-list"></div>
+    </div>
+
+    <script>
+        let score = 0;
+        let time = 50;
+        let countdown;
+        let winScore = 500;
+        let faucetCount = 4;
+        let animationFrame;
+        const gameArea = document.getElementById('game-area');
+        const scoreDisplay = document.getElementById('score');
+        const timerDisplay = document.getElementById('timer');
+        const gameOverScreen = document.getElementById('game-over');
+        const gameWonScreen = document.getElementById('game-won');
+        const finalScoreDisplay = document.getElementById('final-score');
+        const finalScoreWonDisplay = document.getElementById('final-score-won');
+        const historyList = document.getElementById('history-list');
+        const difficultySelect = document.getElementById('difficulty');
+        const instructions = document.getElementById('instructions');
+        const timeGoal = document.getElementById('time-goal');
+        const scoreGoal = document.getElementById('score-goal');
+        const startButton = document.getElementById('start-button');
+
+        // Oyun geçmişi
+        let gameHistory = [];
+
+        // Kırmızı nesneler listesi
+        const redItems = ["🚿", "🚗", "🏠", "👕", "🥦", "🥩"];
+        
+        // Zorluk ayarları
+        const difficulties = {
+            easy: { time: 60, faucets: 3, leaks: 1, items: 1, winScore: 500, speed: 6, theme: { bgGradient: 'linear-gradient(to bottom, #c8e6c9, #a5d6a7)', faucetColor: '#388e3c', faucetHover: '#2e7d32', leakColor: '#d32f2f', leakHover: '#b71c1c' } },
+            medium: { time: 50, faucets: 4, leaks: 2, items: 2, winScore: 500, speed: 8, theme: { bgGradient: 'linear-gradient(to bottom, #b2dfdb, #e0f7fa)', faucetColor: '#00796b', faucetHover: '#004d40', leakColor: '#d32f2f', leakHover: '#b71c1c' } },
+            hard: { time: 40, faucets: 5, leaks: 3, items: 3, winScore: 500, speed: 10, theme: { bgGradient: 'linear-gradient(to bottom, #bbdefb, #90caf9)', faucetColor: '#0288d1', faucetHover: '#01579b', leakColor: '#d32f2f', leakHover: '#b71c1c' } }
+        };
+
+        function createFaucet() {
+            const faucet = document.createElement('div');
+            faucet.classList.add('faucet');
+            faucet.style.top = Math.random() * (gameArea.clientHeight - 70) + 'px';
+            faucet.style.left = Math.random() * (gameArea.clientWidth - 70) + 'px';
+            faucet.style.background = `radial-gradient(circle, ${difficulties[difficultySelect.value].theme.faucetColor} 0%, ${difficulties[difficultySelect.value].theme.faucetHover} 100%)`;
+            faucet.textContent = "💧";
+
+            // Hareket için hız ve yön
+            faucet.velocity = {
+                x: (Math.random() - 0.5) * difficulties[difficultySelect.value].speed,
+                y: (Math.random() - 0.5) * difficulties[difficultySelect.value].speed
+            };
+
+            // Birden fazla su damlası efekti
+            for (let i = 0; i < 3; i++) {
+                const drop = document.createElement('div');
+                drop.classList.add('water-drop');
+                drop.textContent = "💧";
+                drop.style.left = `${40 + i * 10}%`;
+                drop.style.top = '70%';
+                drop.style.animationDelay = `${i * 0.2}s`;
+                faucet.appendChild(drop);
+            }
+
+            faucet.addEventListener('click', () => {
+                score += 10;
+                scoreDisplay.textContent = 'Puan: ' + score;
+                gameArea.removeChild(faucet);
+                createFaucet();
+                checkWinCondition();
+            });
+            gameArea.appendChild(faucet);
+        }
+
+        function createLeak() {
+            const leak = document.createElement('div');
+            leak.classList.add('leak');
+            leak.style.top = Math.random() * (gameArea.clientHeight - 70) + 'px';
+            leak.style.left = Math.random() * (gameArea.clientWidth - 70) + 'px';
+            leak.style.background = `radial-gradient(circle, ${difficulties[difficultySelect.value].theme.leakColor} 0%, ${difficulties[difficultySelect.value].theme.leakHover} 100%)`;
+            leak.textContent = "🚰";
+
+            // Hareket için hız ve yön
+            leak.velocity = {
+                x: (Math.random() - 0.5) * difficulties[difficultySelect.value].speed,
+                y: (Math.random() - 0.5) * difficulties[difficultySelect.value].speed
+            };
+
+            leak.addEventListener('click', () => {
+                clearInterval(countdown);
+                cancelAnimationFrame(animationFrame);
+                gameArea.style.pointerEvents = 'none';
+                finalScoreDisplay.textContent = score;
+                gameOverScreen.style.display = 'flex';
+                gameHistory.push({ score, status: 'Sızıntıya Tıklandı', difficulty: difficultySelect.value });
+                updateHistory();
+            });
+            gameArea.appendChild(leak);
+        }
+
+        function createRedItem() {
+            const item = document.createElement('div');
+            item.classList.add('item');
+            item.style.top = Math.random() * (gameArea.clientHeight - 70) + 'px';
+            item.style.left = Math.random() * (gameArea.clientWidth - 70) + 'px';
+            item.style.background = `radial-gradient(circle, ${difficulties[difficultySelect.value].theme.leakColor} 0%, ${difficulties[difficultySelect.value].theme.leakHover} 100%)`;
+            
+            // Rastgele bir kırmızı nesne seç
+            const randomItem = redItems[Math.floor(Math.random() * redItems.length)];
+            item.textContent = randomItem;
+
+            // Hareket için hız ve yön
+            item.velocity = {
+                x: (Math.random() - 0.5) * difficulties[difficultySelect.value].speed,
+                y: (Math.random() - 0.5) * difficulties[difficultySelect.value].speed
+            };
+
+            item.addEventListener('click', () => {
+                clearInterval(countdown);
+                cancelAnimationFrame(animationFrame);
+                gameArea.style.pointerEvents = 'none';
+                finalScoreDisplay.textContent = score;
+                gameOverScreen.style.display = 'flex';
+                gameHistory.push({ score, status: 'Kırmızı Nesneye Tıklandı', difficulty: difficultySelect.value });
+                updateHistory();
+            });
+            gameArea.appendChild(item);
+        }
+
+        function moveElements() {
+            const elements = gameArea.querySelectorAll('.faucet, .leak, .item');
+            elements.forEach(el => {
+                let top = parseFloat(el.style.top);
+                let left = parseFloat(el.style.left);
+                top += el.velocity.y;
+                left += el.velocity.x;
+
+                // Sınır kontrolü
+                if (top <= 0 || top >= gameArea.clientHeight - 70) {
+                    el.velocity.y = -el.velocity.y;
+                    top = Math.max(0, Math.min(top, gameArea.clientHeight - 70));
+                }
+                if (left <= 0 || left >= gameArea.clientWidth - 70) {
+                    el.velocity.x = -el.velocity.x;
+                    left = Math.max(0, Math.min(left, gameArea.clientWidth - 70));
+                }
+
+                el.style.top = top + 'px';
+                el.style.left = left + 'px';
+            });
+
+            animationFrame = requestAnimationFrame(moveElements);
+        }
+
+        function checkWinCondition() {
+            if (score >= winScore) {
+                clearInterval(countdown);
+                cancelAnimationFrame(animationFrame);
+                gameArea.style.pointerEvents = 'none';
+                finalScoreWonDisplay.textContent = score;
+                gameWonScreen.style.display = 'flex';
+                gameHistory.push({ score, status: 'Kazanıldı', difficulty: difficultySelect.value });
+                updateHistory();
+            }
+        }
+
+        function updateHistory() {
+            historyList.innerHTML = '';
+            gameHistory.forEach((game, index) => {
+                const p = document.createElement('p');
+                p.textContent = `Oyun ${index + 1}: Puan: ${game.score}, Durum: ${game.status}, Zorluk: ${game.difficulty}`;
+                historyList.appendChild(p);
+            });
+        }
+
+        function startGame() {
+            // Oyun alanını ve bilgileri göster
+            gameArea.style.display = 'block';
+            scoreDisplay.style.display = 'block';
+            timerDisplay.style.display = 'block';
+            startButton.style.display = 'none'; // Başlat butonunu gizle
+
+            // Önceki oyunu temizle
+            clearInterval(countdown);
+            cancelAnimationFrame(animationFrame);
+            gameArea.innerHTML = `
+                <div id="game-over" class="game-over">
+                    <div>Oyun Bitti!</div>
+                    <div>Toplam Puan: <span id="final-score"></span></div>
+                    <button onclick="startGame()">Yeniden Başlat</button>
+                </div>
+                <div id="game-won" class="game-won">
+                    <div>Kazandınız! 🎉</div>
+                    <div>Toplam Puan: <span id="final-score-won"></span></div>
+                    <button onclick="startGame()">Yeniden Başlat</button>
+                </div>`;
+            score = 0;
+            scoreDisplay.textContent = 'Puan: ' + score;
+            gameArea.style.pointerEvents = 'auto';
+            gameOverScreen.style.display = 'none';
+            gameWonScreen.style.display = 'none';
+
+            // Zorluk ayarlarını uygula
+            const difficulty = difficultySelect.value;
+            time = difficulties[difficulty].time;
+            faucetCount = difficulties[difficulty].faucets;
+            const leakCount = difficulties[difficulty].leaks;
+            const itemCount = difficulties[difficulty].items;
+            winScore = difficulties[difficulty].winScore;
+            gameArea.style.background = difficulties[difficulty].theme.bgGradient;
+            timerDisplay.textContent = 'Kalan Süre: ' + time;
+            timeGoal.textContent = time;
+            scoreGoal.textContent = winScore;
+
+            // Muslukları, sızıntıları ve kırmızı nesneleri oluştur
+            for (let i = 0; i < faucetCount; i++) createFaucet();
+            for (let i = 0; i < leakCount; i++) createLeak();
+            for (let i = 0; i < itemCount; i++) createRedItem();
+
+            // Zamanlayıcıyı başlat
+            countdown = setInterval(() => {
+                time--;
+                timerDisplay.textContent = 'Kalan Süre: ' + time;
+                if (time <= 0 && score < winScore) {
+                    clearInterval(countdown);
+                    cancelAnimationFrame(animationFrame);
+                    gameArea.style.pointerEvents = 'none';
+                    finalScoreDisplay.textContent = score;
+                    gameOverScreen.style.display = 'flex';
+                    gameHistory.push({ score, status: 'Kaybedildi', difficulty: difficultySelect.value });
+                    updateHistory();
+                }
+            }, 1000);
+
+            // Hareket animasyonunu başlat
+            animationFrame = requestAnimationFrame(moveElements);
+        }
+    </script>
+</body>
+</html>
